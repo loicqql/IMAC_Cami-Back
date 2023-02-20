@@ -1,0 +1,8 @@
+{
+  "api-base_url": "XXX",
+  "api-token": "XXX",
+  "mongodb-user": "XXX",
+  "mongodb-password": "XXX",
+  "mongodb-host": "XXX",
+  "mongodb-database": "XXX"
+}

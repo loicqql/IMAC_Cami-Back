@@ -10,7 +10,17 @@ async function main() {
 
   for (let i = 1; i < 15; i++) {
     let res = await axios(preReq('/movie/top_rated', i));
-    let movies = res.data.results.filter(movie => movie.popularity > 30);
+    res = res.data.results.filter(movie => movie.popularity > 30);
+
+    let movies = [];
+    res.forEach(movie => {
+      movies.push({
+        id: movie.id,
+        title: movie.title,
+        backdrop_path: movie.backdrop_path,
+        poster_path: movie.poster_path,
+      });
+    });
     data = data.concat(movies);
   }
 

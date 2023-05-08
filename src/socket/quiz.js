@@ -1,52 +1,62 @@
 const { makeQuizCode } = require('../utils.js');
 const { mongoose, Quiz } = require('../model/Quiz.js');
 
-async function createQuiz(usernameHost, avatarId) {
+async function createQuiz() {
 
-  const idPlayer = new mongoose.Types.ObjectId();
   let code = null;
   let quizzes = null;
   do {
     code = makeQuizCode();
-    quizzes = await existsQuiz(code);
+    quizzes = await findQuiz(code);
   } while (quizzes.length != 0);
 
   //return all data
   const quiz = await Quiz.create({
     code: code,
-    questions: [],
-    players: [
-      {
-        user: {name: usernameHost, avatarId: avatarId},
-        score: 0,
-        ready: false,
-        host: true,
-        id: idPlayer,
-      }
-    ]
+    questions: [
+      { name: 'question1', startAt: false },
+      { name: 'question2', startAt: false },
+      { name: 'question3', startAt: false },
+      { name: 'question4', startAt: false },
+      { name: 'question5', startAt: false },
+      { name: 'question6', startAt: false }
+    ],
+    answers: [
+      { value: 'answer1', userAnswers: [] },
+      { value: 'answer2', userAnswers: [] },
+      { value: 'answer3', userAnswers: [] },
+      { value: 'answer4', userAnswers: [] },
+      { value: 'answer5', userAnswers: [] },
+      { value: 'answer6', userAnswers: [] },
+    ],
+    players: []
   });
 
   return quiz;
 }
 
-async function existsQuiz(code) {
+async function findQuiz(code) {
   return await Quiz.find({ code: code });
 }
 
-async function joinQuiz(code, username, avatarId) {
+async function joinQuiz(code, username, avatarId, host) {
 
   const idUser = new mongoose.Types.ObjectId();
   let quiz = await Quiz.findOneAndUpdate(
     { code: code },
     {
       $push: {
-        players: {user: {name: username, avatarId: avatarId}, score: 0, ready: false, host: false, id: idUser}
+        players: { user: { name: username, avatarId: avatarId }, score: 0, ready: false, host: host, id: idUser }
       }
     },
-    {new : true}
+    { new: true }
   ).exec();
 
-  return {players : quiz.players, idUser : idUser}
+  if (!quiz) {
+    return null;
+  }
+
+  return { players: quiz.players, idUser: idUser }
 }
 
 async function userReady(idUser, value) {
@@ -57,8 +67,78 @@ async function userReady(idUser, value) {
         'players.$.ready': value
       }
     },
-    {new : true}
+    { new: true }
   ).exec();
+}
+
+async function startQuestion(code, questionNumber) {
+  let field = `questions.${questionNumber}.startAt`;
+  return await Quiz.findOneAndUpdate(
+    { code: code },
+    {
+      $set: {
+        [field]: new Date(),
+      }
+    },
+    { new: true }
+  ).exec();
+}
+
+async function checkAnswer(code, questionNumber, answer, idUser) { // TO DO
+  let quiz = await findQuiz(code);
+  if (quiz[0].answers[questionNumber].userAnswers.find(id => id == new mongoose.Types.ObjectId(idUser))) { // prevent double response
+    return false;
+  }
+  // if(answer == quiz[0].answers[questionNumber].value) {
+  if (true) {
+    return true;
+  }
+  return false;
+}
+
+async function addScore(code, questionNumber, idUser) {
+  let quiz = await findQuiz(code);
+  let score = calculateScore(quiz[0].questions[questionNumber].startAt);
+  quiz = await Quiz.findOneAndUpdate(
+    { 'players.id': new mongoose.Types.ObjectId(idUser) },
+    {
+      $inc: {
+        'players.$.score': score
+      }
+    },
+    { new: true }
+  ).exec();
+  let username = quiz.players.filter(player => player.id == idUser)[0].user.name;
+  return { score: quiz.players, notification: `${username} vient de trouver la réponse` }
+}
+
+function calculateScore(timestampQuestion) {
+  let dateQuestion = new Date(timestampQuestion);
+  let delta = (Date.now() - dateQuestion.valueOf()) / 1000;
+  if (dateQuestion == false) {
+    console.error("error: timestampQuestion == false");
+    return 0;
+  }
+  if (delta < 0) {
+    console.error("error: delta < 0");
+    return 0;
+  }
+  return Math.floor(500 - delta * 25) > 0 ? Math.floor(500 - delta * 25) : 0; // 30 sec
+}
+
+async function saveAnswer(code, questionNumber, idUser) {
+  let field = `answers.${questionNumber}.userAnswers`;
+  let quiz = await Quiz.findOneAndUpdate(
+    { code: code },
+    {
+      $addToSet: {
+        [field]: new mongoose.Types.ObjectId(idUser),
+      }
+    },
+    { new: true }
+  ).exec();
+
+  return quiz.players.length == quiz.answers[0].userAnswers.length;
 }
 
 /*
@@ -98,4 +178,4 @@ async function odl() {
 
 */
 
-module.exports = { createQuiz, joinQuiz, userReady};
+module.exports = { createQuiz, joinQuiz, userReady, findQuiz, startQuestion, checkAnswer, addScore, saveAnswer };

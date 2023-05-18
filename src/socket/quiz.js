@@ -1,7 +1,8 @@
-const { makeQuizCode } = require('../utils.js');
+const { makeQuizCode, getRandomInt } = require('../utils.js');
 const { mongoose, Quiz } = require('../model/Quiz.js');
+const listMovies = require('../../movies.json');
 
-async function createQuiz() {
+async function createQuiz(data) { // { nbQuestions: X, filterGenres: [...] }
 
   let code = null;
   let quizzes = null;
@@ -10,25 +11,25 @@ async function createQuiz() {
     quizzes = await findQuiz(code);
   } while (quizzes.length != 0);
 
+  let ids = [];
+  while (ids.length < data.nbQuestions) {
+    let r = getRandomInt(listMovies.movies.length);
+    if (ids.indexOf(r) === -1) ids.push(r);
+  }
+
+  let questions = [];
+  let answers = [];
+
+  ids.forEach(id => {
+    questions.push({ value: listMovies.movies[id].backdrop_path, startAt: false });
+    answers.push({ value: listMovies.movies[id].id, title: listMovies.movies[id].title, userAnswers: [] });
+  });
+
   //return all data
   const quiz = await Quiz.create({
     code: code,
-    questions: [
-      { name: 'question1', startAt: false },
-      { name: 'question2', startAt: false },
-      { name: 'question3', startAt: false },
-      { name: 'question4', startAt: false },
-      { name: 'question5', startAt: false },
-      { name: 'question6', startAt: false }
-    ],
-    answers: [
-      { value: 'answer1', userAnswers: [] },
-      { value: 'answer2', userAnswers: [] },
-      { value: 'answer3', userAnswers: [] },
-      { value: 'answer4', userAnswers: [] },
-      { value: 'answer5', userAnswers: [] },
-      { value: 'answer6', userAnswers: [] },
-    ],
+    questions: questions,
+    answers: answers,
     players: []
   });
 
@@ -89,8 +90,7 @@ async function checkAnswer(code, questionNumber, answer, idUser) { // TO DO
   if (quiz[0].answers[questionNumber].userAnswers.find(id => id == new mongoose.Types.ObjectId(idUser))) { // prevent double response
     return false;
   }
-  // if(answer == quiz[0].answers[questionNumber].value) {
-  if (true) {
+  if (answer == quiz[0].answers[questionNumber].value) {
     return true;
   }
   return false;
@@ -142,27 +142,27 @@ async function saveAnswer(code, questionNumber, idUser) {
 }
 
 /*
-
+ 
 async function odl() {
   let movies = listMovies.movies;
-
+ 
   let quiz = [];
-
+ 
   if(movies.length <= 0)
     return false;
-
+ 
   let i = 0;
   let max = 10;
   do {
     let movie = getRandomInArray(movies);
-
+ 
     let picked = false;
     quiz.forEach(el => {
       if(el.id === movie.id) {
         picked = true;
       }
     });
-
+ 
     if(!picked) {
       quiz.push({
         id: movie.id,
@@ -175,7 +175,7 @@ async function odl() {
   } while (i < max);
   
 }
-
+ 
 */
 
 module.exports = { createQuiz, joinQuiz, userReady, findQuiz, startQuestion, checkAnswer, addScore, saveAnswer };

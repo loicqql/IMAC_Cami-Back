@@ -25,8 +25,8 @@ main().catch(err => console.log(err));
 
 io.on('connection', async socket => {
 
-  socket.on('create', async (data, callback) => {
-    let res = await createQuiz();
+  socket.on('create', async (data, callback) => { // { nbQuestions: X, filterGenres: [...] }
+    let res = await createQuiz(data);
     callback(res.code)
   });
 
@@ -67,7 +67,7 @@ io.on('connection', async socket => {
   socket.on('startQuestion', async (data) => { // {code: XXX, questionNumber: X}
     let res = await startQuestion(data.code, data.questionNumber);
     if (res.questions) {
-      io.to(data.code).emit('question', { question: res.questions[data.questionNumber], questionNumber: data.questionNumber });
+      io.to(data.code).emit('question', { question: res.questions[data.questionNumber], questionNumber: data.questionNumber, numberOfQuestions: res.questions.length });
       io.to(data.code).emit('updateScore', res.players);
     } else {
       console.error('error : start question ' + data.questionNumber + ' / ' + data.code);
@@ -80,7 +80,7 @@ io.on('connection', async socket => {
       console.error("endquestion " + code);
     }
     io.to(code).emit('updateScore', res[0].players);
-    io.to(code).emit('answer', res[0].answers[questionNumber].value);
+    io.to(code).emit('answer', res[0].answers[questionNumber].title);
 
     //check bonus + 200pts
   }
@@ -102,6 +102,24 @@ io.on('connection', async socket => {
 
   socket.on('endQuestion', async (data) => { // {code: XXX, questionNumber: X}
     endQuestion(data.code, data.questionNumber);
+  })
+
+  socket.on('clear', async (data) => { // {code: XXX}
+    io.to(data.code).emit('clear', '');
+  })
+
+  socket.on('startLeaderBoard', async (data) => { // {code: XXX}
+    io.to(data.code).emit('startLeaderBoard', '');
+  })
+
+  socket.on('sendFinalScore', async (data) => { // {code: XXX}
+    let res = await findQuiz(data.code);
+    if (res[0].players) {
+      io.to(data.code).emit('finalScore', res[0].players);
+    } else {
+      console.error('error : send final score ' + ' / ' + data.code);
+    }
+
   })
 
 });

@@ -1,6 +1,8 @@
 const { makeQuizCode, getRandomInt } = require('../utils.js');
 const { mongoose, Quiz } = require('../model/Quiz.js');
 const listMovies = require('../../movies.json');
+const config = require('../../config.json');
+const axios = require('axios');
 
 async function createQuiz(data) { // { nbQuestions: X, filterGenres: [...] }
 
@@ -11,29 +13,76 @@ async function createQuiz(data) { // { nbQuestions: X, filterGenres: [...] }
     quizzes = await findQuiz(code);
   } while (quizzes.length != 0);
 
-  let ids = [];
-  while (ids.length < data.nbQuestions) {
-    let r = getRandomInt(listMovies.movies.length);
-    if (ids.indexOf(r) === -1) ids.push(r);
+  let res;
+  if (data.filterGenres.length == 0) {
+    res = createNoGenre(data.nbQuestions);
+  } else {
+    res = await createWithGenres(data.nbQuestions, data.filterGenres, 8);
+    if (res.questions.length < 2) {
+      res = await createWithGenres(data.nbQuestions, data.filterGenres, 5);
+      if (res.questions.length < 2) {
+        res = createNoGenre(data.nbQuestions);
+      }
+    }
   }
-
-  let questions = [];
-  let answers = [];
-
-  ids.forEach(id => {
-    questions.push({ value: listMovies.movies[id].backdrop_path, startAt: false });
-    answers.push({ value: listMovies.movies[id].id, title: listMovies.movies[id].title, userAnswers: [] });
-  });
 
   //return all data
   const quiz = await Quiz.create({
     code: code,
-    questions: questions,
-    answers: answers,
+    questions: res.questions,
+    answers: res.answers,
     players: []
   });
 
   return quiz;
+}
+
+async function createWithGenres(nbQuestions, genres, vote_average) {
+  let questions = [];
+  let answers = [];
+
+  let genresString = "";
+  genres.forEach(genre => {
+    genresString += genre.id + '|';
+  });
+  genresString = genresString.slice(0, -1); // remove last '|'
+
+  let url = config['api-base_url'] + '/discover/movie?language=fr&with_genres=' + genresString + '&vote_average.gte=' + vote_average + '&api_key=' + config['api-token'];
+
+  let res = await axios(url);
+  res = res.data.results;
+
+  let ids = [];
+  while (ids.length < (nbQuestions > res.length ? nbQuestions : res.length)) {
+    let r = getRandomInt(res.length);
+    if (ids.indexOf(r) === -1) ids.push(r);
+  }
+
+  ids.forEach(id => { // same line 83
+    questions.push({ value: res[id].backdrop_path, startAt: false });
+    answers.push({ value: res[id].id, title: res[id].title, userAnswers: [] });
+  });
+
+  return { questions: questions, answers: answers }
+}
+
+function createNoGenre(nbQuestions) {
+
+  let questions = [];
+  let answers = [];
+
+  let ids = [];
+  while (ids.length < nbQuestions) {
+    let r = getRandomInt(listMovies.movies.length);
+    if (ids.indexOf(r) === -1) ids.push(r);
+  }
+
+  ids.forEach(id => { // same line 62
+    questions.push({ value: listMovies.movies[id].backdrop_path, startAt: false });
+    answers.push({ value: listMovies.movies[id].id, title: listMovies.movies[id].title, userAnswers: [] });
+  });
+
+  return { questions: questions, answers: answers }
 }
 
 async function findQuiz(code) {

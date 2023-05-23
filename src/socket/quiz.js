@@ -187,7 +187,7 @@ async function saveAnswer(code, questionNumber, idUser) {
     { new: true }
   ).exec();
 
-  return quiz.players.length == quiz.answers[0].userAnswers.length;
+  return quiz.players.length == quiz.answers[questionNumber].userAnswers.length;
 }
 
 /*

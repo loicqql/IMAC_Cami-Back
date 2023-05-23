@@ -4,7 +4,7 @@ module.exports = {
       name: 'cami-back',
       exec_mode: 'cluster',
       instances: 'max', // Or a number of instances
-      script: 'index.js',
+      script: './src/index.js',
       args: 'start'
     }
   ]

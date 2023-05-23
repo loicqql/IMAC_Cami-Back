@@ -133,6 +133,6 @@ app.get('/movies', (req, res) => {
   res.send(listMovies);
 })
 
-http.listen(5000, () => {
-  console.log('listening on *:' + 5000);
+http.listen(3001, () => {
+  console.log('listening on *:' + 3001);
 });

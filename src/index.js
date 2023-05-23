@@ -89,15 +89,17 @@ io.on('connection', async socket => {
     let res = await checkAnswer(data.code, data.questionNumber, data.answer, data.idUser);
     if (!res) {
       callback(false);
-    }
-    res = await addScore(data.code, data.questionNumber, data.idUser); // {score: Object, notification: X}
-    io.to(data.code).emit('updateScore', res.score);
-    io.to(data.code).emit('notification', res.notification);
-    callback(true);
+    } else {
+      res = await addScore(data.code, data.questionNumber, data.idUser); // {score: Object, notification: X}
+      io.to(data.code).emit('updateScore', res.score);
+      io.to(data.code).emit('notification', res.notification);
+      callback(true);
 
-    if (await saveAnswer(data.code, data.questionNumber, data.idUser)) { // true if everyone has answer 
-      endQuestion(data.code, data.questionNumber);
-    };
+      if (await saveAnswer(data.code, data.questionNumber, data.idUser)) { // true if everyone has answer 
+        endQuestion(data.code, data.questionNumber);
+      };
+    }
+
   })
 
   socket.on('endQuestion', async (data) => { // {code: XXX, questionNumber: X}

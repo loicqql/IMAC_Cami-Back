@@ -136,7 +136,7 @@ async function startQuestion(code, questionNumber) {
 
 async function checkAnswer(code, questionNumber, answer, idUser) { // TO DO
   let quiz = await findQuiz(code);
-  if (quiz[0].answers[questionNumber].userAnswers.find(id => id == new mongoose.Types.ObjectId(idUser))) { // prevent double response
+  if (quiz[0].answers[questionNumber].userAnswers.find(id => id.toString() == idUser)) { // prevent double response
     return false;
   }
   if (answer == quiz[0].answers[questionNumber].value) {
